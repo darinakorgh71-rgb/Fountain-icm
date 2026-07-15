@@ -3,656 +3,333 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Fountain (FNT) — Creative Digital Worlds</title>
-  <meta name="description" content="Fountain (FNT) — тестовий utility-токен для творчих цифрових світів у мережі Sepolia." />
-  <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.min.js"></script>
+  <title>Fountain World</title>
+  <meta name="description" content="Interactive 3D prototype of Fountain World." />
   <style>
-    :root{
-      --bg:#06101d;
-      --bg2:#0a1829;
-      --panel:#10233a;
-      --panel2:#0d1c30;
-      --text:#f7fbff;
-      --muted:#a9b8cc;
-      --cyan:#67ddff;
-      --gold:#ffd66b;
-      --green:#49d49d;
-      --red:#ff6f7d;
-      --line:rgba(255,255,255,.09);
-      --shadow:0 25px 80px rgba(0,0,0,.38);
+    html,body{margin:0;height:100%;overflow:hidden;background:#070b18;font-family:Inter,Arial,sans-serif;color:#fff}
+    #app{position:fixed;inset:0}
+    canvas{display:block}
+    .hud{
+      position:fixed;left:18px;top:18px;z-index:10;
+      background:rgba(8,12,28,.72);backdrop-filter:blur(14px);
+      border:1px solid rgba(255,255,255,.12);border-radius:18px;
+      padding:16px 18px;max-width:340px;box-shadow:0 20px 60px rgba(0,0,0,.35)
     }
-
-    *{box-sizing:border-box}
-    html{scroll-behavior:smooth}
-    body{
-      margin:0;
-      font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-      color:var(--text);
-      background:
-        radial-gradient(circle at 12% 6%, rgba(103,221,255,.16), transparent 28%),
-        radial-gradient(circle at 88% 10%, rgba(255,214,107,.12), transparent 24%),
-        linear-gradient(180deg,var(--bg) 0%,#071422 55%,#081522 100%);
-      min-height:100vh;
-    }
-
-    a{color:inherit;text-decoration:none}
-    button{font:inherit}
-    .wrap{width:min(1180px,92%);margin:auto}
-
-    header{
-      position:sticky;
-      top:0;
-      z-index:50;
-      backdrop-filter:blur(18px);
-      background:rgba(6,16,29,.78);
-      border-bottom:1px solid var(--line);
-    }
-
-    nav{
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      padding:16px 0;
-      gap:20px;
-    }
-
-    .brand{
-      display:flex;
-      align-items:center;
-      gap:12px;
-      font-weight:850;
-      font-size:18px;
-    }
-
-    .brand-mark{
-      width:44px;
-      height:44px;
-      border-radius:15px;
-      display:grid;
-      place-items:center;
-      background:linear-gradient(145deg,var(--cyan),var(--gold));
-      color:#06101d;
-      box-shadow:var(--shadow);
-      font-size:23px;
-    }
-
-    .navlinks{
-      display:flex;
-      gap:24px;
-      color:var(--muted);
-      font-size:14px;
-    }
-
-    .navlinks a:hover{color:var(--text)}
-
+    .hud h1{margin:0 0 6px;font-size:22px}
+    .hud p{margin:6px 0;color:#bdc7db;line-height:1.45;font-size:14px}
     .btn{
-      border:none;
-      border-radius:13px;
-      padding:12px 18px;
-      cursor:pointer;
-      font-weight:800;
-      background:linear-gradient(135deg,var(--cyan),#a3ecff);
-      color:#06101d;
-      box-shadow:0 12px 30px rgba(103,221,255,.18);
-      transition:.2s ease;
+      border:0;border-radius:12px;padding:11px 15px;margin-top:10px;
+      background:linear-gradient(135deg,#9b5cff,#e1b85b);color:#090b14;
+      font-weight:800;cursor:pointer
     }
-
-    .btn:hover{transform:translateY(-2px)}
-    .btn.secondary{
-      background:transparent;
-      color:var(--text);
-      border:1px solid var(--line);
-      box-shadow:none;
+    .btn.secondary{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.14);margin-left:6px}
+    .panel{
+      position:fixed;right:18px;top:18px;z-index:10;width:260px;
+      background:rgba(8,12,28,.72);backdrop-filter:blur(14px);
+      border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:16px
     }
-
-    .hero{
-      min-height:78vh;
-      display:grid;
-      grid-template-columns:1.1fr .9fr;
-      gap:52px;
-      align-items:center;
-      padding:88px 0 64px;
+    .stat{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.08);font-size:14px}
+    .stat:last-child{border-bottom:0}
+    .tip{
+      position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:10;
+      background:rgba(8,12,28,.72);border:1px solid rgba(255,255,255,.12);
+      border-radius:999px;padding:10px 16px;color:#cbd5e8;font-size:13px;text-align:center
     }
-
-    .eyebrow{
-      color:var(--cyan);
-      text-transform:uppercase;
-      letter-spacing:.18em;
-      font-size:12px;
-      font-weight:850;
+    .modal{
+      position:fixed;inset:0;z-index:20;display:none;place-items:center;
+      background:rgba(2,4,10,.68);backdrop-filter:blur(8px)
     }
-
-    h1{
-      font-size:clamp(46px,7vw,86px);
-      line-height:.98;
-      margin:18px 0 24px;
-      max-width:850px;
+    .modal.show{display:grid}
+    .modal-card{
+      width:min(480px,90%);background:#10182e;border:1px solid rgba(255,255,255,.12);
+      border-radius:22px;padding:24px;box-shadow:0 30px 90px rgba(0,0,0,.5)
     }
-
-    .lead{
-      color:var(--muted);
-      font-size:20px;
-      line-height:1.65;
-      max-width:760px;
-    }
-
-    .hero-actions{
-      display:flex;
-      gap:12px;
-      flex-wrap:wrap;
-      margin-top:30px;
-    }
-
-    .token-card,.card{
-      background:linear-gradient(180deg,rgba(16,35,58,.97),rgba(9,22,38,.97));
-      border:1px solid var(--line);
-      border-radius:24px;
-      box-shadow:var(--shadow);
-    }
-
-    .token-card{
-      padding:28px;
-      position:relative;
-      overflow:hidden;
-    }
-
-    .token-card::before{
-      content:"";
-      position:absolute;
-      width:190px;
-      height:190px;
-      border-radius:50%;
-      background:radial-gradient(circle,rgba(103,221,255,.22),transparent 70%);
-      right:-45px;
-      top:-55px;
-    }
-
-    .token-head{
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      position:relative;
-      z-index:1;
-    }
-
-    .coin{
-      width:82px;
-      height:82px;
-      border-radius:50%;
-      display:grid;
-      place-items:center;
-      background:linear-gradient(145deg,var(--gold),#fff2b0);
-      color:#07111d;
-      font-size:38px;
-      font-weight:950;
-    }
-
-    .pill{
-      display:inline-block;
-      padding:7px 10px;
-      border:1px solid var(--line);
-      border-radius:999px;
-      color:var(--muted);
-      font-size:12px;
-      margin-top:8px;
-    }
-
-    .metric{
-      padding:16px;
-      background:rgba(255,255,255,.035);
-      border-radius:16px;
-      margin-top:14px;
-      position:relative;
-      z-index:1;
-    }
-
-    .metric small{
-      color:var(--muted);
-      display:block;
-      margin-bottom:6px;
-    }
-
-    .metric strong{
-      font-size:18px;
-      word-break:break-word;
-    }
-
-    section{padding:66px 0}
-
-    .section-head{
-      display:flex;
-      justify-content:space-between;
-      gap:28px;
-      align-items:end;
-      margin-bottom:28px;
-    }
-
-    h2{
-      font-size:clamp(32px,4vw,52px);
-      margin:0;
-    }
-
-    .section-head p{
-      max-width:620px;
-      color:var(--muted);
-      line-height:1.65;
-    }
-
-    .grid3{
-      display:grid;
-      grid-template-columns:repeat(3,1fr);
-      gap:18px;
-    }
-
-    .card{padding:24px}
-    .card h3{margin:14px 0 10px}
-    .card p{color:var(--muted);line-height:1.65}
-    .icon{font-size:34px}
-
-    .wallet-grid{
-      display:grid;
-      grid-template-columns:1fr 1fr;
-      gap:20px;
-    }
-
-    .status{
-      margin-top:15px;
-      display:flex;
-      align-items:center;
-      gap:10px;
-      color:var(--muted);
-    }
-
-    .dot{
-      width:10px;
-      height:10px;
-      border-radius:50%;
-      background:#6c7888;
-    }
-
-    .dot.ok{background:var(--green)}
-    .dot.bad{background:var(--red)}
-
-    .mono{
-      font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
-      word-break:break-all;
-      color:#d8e6f5;
-    }
-
-    .balance{
-      font-size:44px;
-      font-weight:900;
-      margin:18px 0;
-    }
-
-    .roadmap{
-      display:grid;
-      gap:14px;
-    }
-
-    .road{
-      display:grid;
-      grid-template-columns:110px 1fr;
-      gap:20px;
-      align-items:start;
-      padding:20px;
-      border-radius:18px;
-      border:1px solid var(--line);
-      background:rgba(255,255,255,.035);
-    }
-
-    .road strong{color:var(--gold)}
-    .road p{color:var(--muted);margin-bottom:0;line-height:1.6}
-
-    .faq{
-      display:grid;
-      gap:12px;
-    }
-
-    details{
-      background:rgba(255,255,255,.035);
-      border:1px solid var(--line);
-      border-radius:16px;
-      padding:18px 20px;
-    }
-
-    summary{
-      cursor:pointer;
-      font-weight:800;
-    }
-
-    details p{
-      color:var(--muted);
-      line-height:1.6;
-    }
-
-    footer{
-      border-top:1px solid var(--line);
-      padding:38px 0 56px;
-      color:var(--muted);
-    }
-
-    .notice{
-      font-size:13px;
-      line-height:1.65;
-    }
-
-    @media (max-width:900px){
-      .hero,.grid3,.wallet-grid{grid-template-columns:1fr}
-      .navlinks{display:none}
-      .hero{padding-top:58px}
-      .road{grid-template-columns:1fr}
+    .modal-card h2{margin-top:0}
+    .modal-card p{color:#bdc7db;line-height:1.55}
+    .close{float:right;background:none;border:0;color:#fff;font-size:24px;cursor:pointer}
+    @media(max-width:760px){
+      .panel{display:none}
+      .hud{max-width:calc(100% - 36px)}
+      .tip{width:calc(100% - 40px);border-radius:16px}
     }
   </style>
 </head>
 <body>
-<header>
-  <div class="wrap">
-    <nav>
-      <a class="brand" href="#home">
-        <div class="brand-mark">⛲</div>
-        <span>Fountain <span style="color:var(--cyan)">FNT</span></span>
-      </a>
+  <div id="app"></div>
 
-      <div class="navlinks">
-        <a href="#about">Ідея</a>
-        <a href="#utility">Utility</a>
-        <a href="#wallet">Wallet</a>
-        <a href="#roadmap">Roadmap</a>
-        <a href="#faq">FAQ</a>
-      </div>
-
-      <button class="btn" onclick="connectWallet()">Connect Wallet</button>
-    </nav>
+  <div class="hud">
+    <h1>⛲ Fountain World</h1>
+    <p>Перший інтерактивний прототип творчого цифрового міста.</p>
+    <button class="btn" id="enterBtn">Увійти у світ</button>
+    <button class="btn secondary" id="walletBtn">MetaMask</button>
+    <p id="walletStatus">Гаманець не підключено</p>
   </div>
-</header>
 
-<main id="home">
-  <div class="wrap">
-    <section class="hero">
-      <div>
-        <div class="eyebrow">Creative digital worlds</div>
-        <h1>Валюта для світів, народжених уявою.</h1>
-        <p class="lead">
-          Fountain (FNT) — тестовий utility-токен для цифрових міст, творчих просторів,
-          персонажів, мистецтва, будинків, кафе та майбутньої економіки imagined worlds.
-        </p>
-
-        <div class="hero-actions">
-          <button class="btn" onclick="connectWallet()">Підключити MetaMask</button>
-          <a class="btn secondary" href="#about">Дізнатися більше</a>
-        </div>
-      </div>
-
-      <aside class="token-card">
-        <div class="token-head">
-          <div>
-            <div style="color:var(--muted);font-size:13px">Token</div>
-            <div style="font-size:32px;font-weight:900">Fountain</div>
-            <span class="pill">Sepolia Testnet</span>
-          </div>
-          <div class="coin">F</div>
-        </div>
-
-        <div class="metric">
-          <small>Symbol</small>
-          <strong>FNT</strong>
-        </div>
-
-        <div class="metric">
-          <small>Total Supply</small>
-          <strong>1,000,000,000 FNT</strong>
-        </div>
-
-        <div class="metric">
-          <small>Contract</small>
-          <strong class="mono">0x40b9b3e6ab22603ffd90f35d3adbaac416a8953b</strong>
-        </div>
-      </aside>
-    </section>
-
-    <section id="about">
-      <div class="section-head">
-        <div>
-          <div class="eyebrow">Vision</div>
-          <h2>Fountain Ecosystem</h2>
-        </div>
-        <p>
-          Fountain створює незалежну цифрову економіку для творчих світів. Проєкт не є
-          офіційно пов’язаним із Microsoft, Electronic Arts або The Sims.
-        </p>
-      </div>
-
-      <div class="grid3">
-        <div class="card">
-          <div class="icon">🏙️</div>
-          <h3>Virtual Cities</h3>
-          <p>Цифрові райони, будинки, кафе, магазини та культурні простори.</p>
-        </div>
-
-        <div class="card">
-          <div class="icon">🎨</div>
-          <h3>Creative Assets</h3>
-          <p>Мистецтво, декор, одяг, предмети та інструменти для персонажів.</p>
-        </div>
-
-        <div class="card">
-          <div class="icon">🧠</div>
-          <h3>Imagined Worlds</h3>
-          <p>Художні світи, натхнені уявою, снами, пам’яттю та сюрреалістичними образами.</p>
-        </div>
-      </div>
-    </section>
-
-    <section id="utility">
-      <div class="section-head">
-        <div>
-          <div class="eyebrow">Utility</div>
-          <h2>Для чого потрібен FNT</h2>
-        </div>
-      </div>
-
-      <div class="grid3">
-        <div class="card">
-          <h3>Купівля предметів</h3>
-          <p>Будинки, меблі, одяг, земля, декор і цифрове мистецтво.</p>
-        </div>
-
-        <div class="card">
-          <h3>Доступ до світів</h3>
-          <p>Створення просторів, персонажів та майбутніх преміальних функцій.</p>
-        </div>
-
-        <div class="card">
-          <h3>Переказ між користувачами</h3>
-          <p>Передача FNT між гаманцями в підтримуваній мережі.</p>
-        </div>
-      </div>
-    </section>
-
-    <section id="wallet">
-      <div class="section-head">
-        <div>
-          <div class="eyebrow">Wallet</div>
-          <h2>Перевір свій баланс FNT</h2>
-        </div>
-        <p>Потрібен MetaMask і мережа Sepolia.</p>
-      </div>
-
-      <div class="wallet-grid">
-        <div class="card">
-          <h3>Підключення</h3>
-          <button class="btn" onclick="connectWallet()">Connect MetaMask</button>
-
-          <div class="status">
-            <span id="statusDot" class="dot"></span>
-            <span id="walletStatus">Гаманець не підключено</span>
-          </div>
-
-          <p id="account" class="mono"></p>
-        </div>
-
-        <div class="card">
-          <h3>Баланс Fountain</h3>
-          <div id="balance" class="balance">— FNT</div>
-          <button class="btn secondary" onclick="refreshBalance()">Оновити баланс</button>
-        </div>
-      </div>
-    </section>
-
-    <section id="roadmap">
-      <div class="section-head">
-        <div>
-          <div class="eyebrow">Roadmap</div>
-          <h2>Наступні етапи</h2>
-        </div>
-      </div>
-
-      <div class="roadmap">
-        <div class="road">
-          <strong>Phase 1</strong>
-          <div><b>Testnet foundation</b><p>Контракт Sepolia, верифікація, сайт і тестування переказів.</p></div>
-        </div>
-
-        <div class="road">
-          <strong>Phase 2</strong>
-          <div><b>Creative prototype</b><p>Демо-магазин цифрових предметів і внутрішня економіка FNT.</p></div>
-        </div>
-
-        <div class="road">
-          <strong>Phase 3</strong>
-          <div><b>Community testing</b><p>Тестова спільнота, документація, перевірка функцій та збір відгуків.</p></div>
-        </div>
-
-        <div class="road">
-          <strong>Phase 4</strong>
-          <div><b>Mainnet decision</b><p>Лише після аудиту безпеки, юридичної оцінки й готовності продукту.</p></div>
-        </div>
-      </div>
-    </section>
-
-    <section id="faq">
-      <div class="section-head">
-        <div>
-          <div class="eyebrow">FAQ</div>
-          <h2>Поширені запитання</h2>
-        </div>
-      </div>
-
-      <div class="faq">
-        <details>
-          <summary>Чи має FNT реальну ціну?</summary>
-          <p>Ні. Поточний контракт працює у тестовій мережі Sepolia і не має гарантованої ринкової вартості.</p>
-        </details>
-
-        <details>
-          <summary>Чи є Fountain інвестицією?</summary>
-          <p>Ні. Це навчальний тестовий utility-токен і прототип цифрової екосистеми.</p>
-        </details>
-
-        <details>
-          <summary>Чи пов’язаний проєкт із The Sims?</summary>
-          <p>Ні. Fountain є незалежною оригінальною концепцією для imagined worlds.</p>
-        </details>
-      </div>
-    </section>
+  <div class="panel">
+    <div class="stat"><span>Мережа</span><b>Sepolia</b></div>
+    <div class="stat"><span>Токен</span><b>FNT</b></div>
+    <div class="stat"><span>Баланс</span><b id="balance">—</b></div>
+    <div class="stat"><span>Локація</span><b>Central Fountain</b></div>
   </div>
-</main>
 
-<footer>
-  <div class="wrap">
-    <b>Fountain (FNT)</b>
-    <p class="notice">
-      Навчальний тестовий проєкт у мережі Sepolia. Не є інвестиційною пропозицією.
-      Не передавайте нікому seed phrase або приватні ключі.
-    </p>
+  <div class="tip">Миша: огляд · WASD: рух · клік по будівлі: інформація</div>
+
+  <div class="modal" id="modal">
+    <div class="modal-card">
+      <button class="close" id="closeModal">×</button>
+      <h2 id="modalTitle">Локація</h2>
+      <p id="modalText"></p>
+    </div>
   </div>
-</footer>
 
-<script>
-  const CONTRACT_ADDRESS = "0x40b9b3e6ab22603ffd90f35d3adbaac416a8953b";
-  const SEPOLIA_CHAIN_ID = "0xaa36a7";
-  const ABI = [
-    "function balanceOf(address) view returns (uint256)",
-    "function decimals() view returns (uint8)",
-    "function symbol() view returns (string)"
-  ];
+  <script src="https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.164.1/examples/js/controls/PointerLockControls.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.min.js"></script>
 
-  let currentAccount = null;
-  let provider = null;
+  <script>
+    const CONTRACT_ADDRESS = "0x40b9b3e6ab22603ffd90f35d3adbaac416a8953b";
+    const SEPOLIA_CHAIN_ID = "0xaa36a7";
+    const ABI = [
+      "function balanceOf(address) view returns (uint256)",
+      "function decimals() view returns (uint8)",
+      "function symbol() view returns (string)"
+    ];
 
-  async function connectWallet() {
-    const status = document.getElementById("walletStatus");
-    const dot = document.getElementById("statusDot");
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x080b18);
+    scene.fog = new THREE.Fog(0x080b18, 35, 110);
 
-    try {
-      if (!window.ethereum) {
-        status.textContent = "MetaMask не знайдено";
-        dot.className = "dot bad";
-        return;
+    const camera = new THREE.PerspectiveCamera(70, innerWidth/innerHeight, 0.1, 300);
+    camera.position.set(0, 3, 14);
+
+    const renderer = new THREE.WebGLRenderer({antialias:true});
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    document.getElementById("app").appendChild(renderer.domElement);
+
+    const controls = new THREE.PointerLockControls(camera, document.body);
+    document.getElementById("enterBtn").onclick = () => controls.lock();
+
+    const ambient = new THREE.HemisphereLight(0x8b72ff, 0x10152a, 1.7);
+    scene.add(ambient);
+
+    const moon = new THREE.DirectionalLight(0xffffff, 1.8);
+    moon.position.set(20, 30, 10);
+    moon.castShadow = true;
+    scene.add(moon);
+
+    const ground = new THREE.Mesh(
+      new THREE.CircleGeometry(60, 96),
+      new THREE.MeshStandardMaterial({color:0x10172c, roughness:.95, metalness:.05})
+    );
+    ground.rotation.x = -Math.PI/2;
+    ground.receiveShadow = true;
+    scene.add(ground);
+
+    const plaza = new THREE.Mesh(
+      new THREE.CircleGeometry(15, 64),
+      new THREE.MeshStandardMaterial({color:0x1a2240, roughness:.8})
+    );
+    plaza.rotation.x = -Math.PI/2;
+    plaza.position.y = .02;
+    scene.add(plaza);
+
+    // Fountain
+    const fountainGroup = new THREE.Group();
+    const base = new THREE.Mesh(
+      new THREE.CylinderGeometry(4.2,4.6,1,64),
+      new THREE.MeshStandardMaterial({color:0x3a2a5f,metalness:.45,roughness:.35})
+    );
+    base.position.y=.5;base.castShadow=true;fountainGroup.add(base);
+
+    const basin = new THREE.Mesh(
+      new THREE.CylinderGeometry(3.5,3.8,.45,64),
+      new THREE.MeshStandardMaterial({color:0x5d36a6,metalness:.35,roughness:.25})
+    );
+    basin.position.y=1.1;fountainGroup.add(basin);
+
+    const water = new THREE.Mesh(
+      new THREE.CylinderGeometry(3.1,3.1,.12,64),
+      new THREE.MeshStandardMaterial({color:0x7d6cff,emissive:0x24145d,transparent:true,opacity:.86})
+    );
+    water.position.y=1.36;fountainGroup.add(water);
+
+    const stem = new THREE.Mesh(
+      new THREE.CylinderGeometry(.55,.8,3.2,32),
+      new THREE.MeshStandardMaterial({color:0xe1b85b,metalness:.75,roughness:.22})
+    );
+    stem.position.y=2.7;fountainGroup.add(stem);
+
+    const top = new THREE.Mesh(
+      new THREE.SphereGeometry(.85,32,32),
+      new THREE.MeshStandardMaterial({color:0xb87cff,emissive:0x3d176f,emissiveIntensity:.8})
+    );
+    top.position.y=4.5;fountainGroup.add(top);
+
+    scene.add(fountainGroup);
+
+    // Water particles
+    const particles=[];
+    for(let i=0;i<150;i++){
+      const p=new THREE.Mesh(
+        new THREE.SphereGeometry(.04,8,8),
+        new THREE.MeshBasicMaterial({color:0x9fe7ff})
+      );
+      p.userData.angle=Math.random()*Math.PI*2;
+      p.userData.speed=.5+Math.random()*.7;
+      p.userData.radius=.4+Math.random()*2.5;
+      p.userData.offset=Math.random()*6;
+      scene.add(p);particles.push(p);
+    }
+
+    const clickable=[];
+    function building(x,z,w,h,d,color,title,text){
+      const group=new THREE.Group();
+      const body=new THREE.Mesh(
+        new THREE.BoxGeometry(w,h,d),
+        new THREE.MeshStandardMaterial({color,metalness:.18,roughness:.72})
+      );
+      body.position.y=h/2; body.castShadow=true; group.add(body);
+
+      const roof=new THREE.Mesh(
+        new THREE.ConeGeometry(Math.max(w,d)*.75,1.8,4),
+        new THREE.MeshStandardMaterial({color:0xe1b85b,metalness:.55,roughness:.28})
+      );
+      roof.position.y=h+0.9;roof.rotation.y=Math.PI/4;group.add(roof);
+
+      for(let iy=1;iy<h-1;iy+=1.6){
+        for(let ix=-w/2+.7;ix<w/2;ix+=1.4){
+          const win=new THREE.Mesh(
+            new THREE.PlaneGeometry(.5,.7),
+            new THREE.MeshBasicMaterial({color:0xc68aff})
+          );
+          win.position.set(ix,iy,d/2+.01);group.add(win);
+        }
       }
 
-      const chainId = await window.ethereum.request({ method: "eth_chainId" });
+      group.position.set(x,0,z);
+      group.userData={title,text};
+      scene.add(group); clickable.push(group);
+    }
 
-      if (chainId !== SEPOLIA_CHAIN_ID) {
-        await window.ethereum.request({
-          method: "wallet_switchEthereumChain",
-          params: [{ chainId: SEPOLIA_CHAIN_ID }]
-        });
+    building(-12,-8,5,7,5,0x233f67,"Gallery of Memory",
+      "Цифрова галерея для мистецтва, спогадів і сюрреалістичних образів.");
+    building(12,-7,5,6,5,0x4a2c63,"Fountain Café",
+      "Віртуальне кафе, де FNT може використовуватися для цифрових предметів і подій.");
+    building(-13,10,6,8,5,0x274d46,"Creators House",
+      "Простір для художників, дизайнерів та авторів цифрових світів.");
+    building(13,10,6,9,5,0x493f70,"World Library",
+      "Бібліотека історій, персонажів і документів про екосистему Fountain.");
+
+    // Path lights
+    for(let i=0;i<24;i++){
+      const a=i/24*Math.PI*2;
+      const lamp=new THREE.PointLight(0x9b5cff,1.4,7);
+      lamp.position.set(Math.cos(a)*10,1.2,Math.sin(a)*10);
+      scene.add(lamp);
+      const bulb=new THREE.Mesh(
+        new THREE.SphereGeometry(.12,10,10),
+        new THREE.MeshBasicMaterial({color:0xe7c7ff})
+      );
+      bulb.position.copy(lamp.position);scene.add(bulb);
+    }
+
+    // Stars
+    const starGeo=new THREE.BufferGeometry();
+    const starCount=1200;
+    const starPos=new Float32Array(starCount*3);
+    for(let i=0;i<starCount;i++){
+      const r=70+Math.random()*100;
+      const theta=Math.random()*Math.PI*2;
+      const phi=Math.random()*Math.PI/2;
+      starPos[i*3]=Math.cos(theta)*Math.sin(phi)*r;
+      starPos[i*3+1]=20+Math.cos(phi)*r;
+      starPos[i*3+2]=Math.sin(theta)*Math.sin(phi)*r;
+    }
+    starGeo.setAttribute("position",new THREE.BufferAttribute(starPos,3));
+    scene.add(new THREE.Points(starGeo,new THREE.PointsMaterial({color:0xffffff,size:.22})));
+
+    const keys={};
+    addEventListener("keydown",e=>keys[e.code]=true);
+    addEventListener("keyup",e=>keys[e.code]=false);
+
+    const raycaster=new THREE.Raycaster();
+    renderer.domElement.addEventListener("click",()=>{
+      if(controls.isLocked) return;
+      raycaster.setFromCamera(new THREE.Vector2(0,0),camera);
+      const hits=raycaster.intersectObjects(clickable,true);
+      if(hits.length){
+        let obj=hits[0].object;
+        while(obj.parent && !obj.userData.title) obj=obj.parent;
+        if(obj.userData.title){
+          document.getElementById("modalTitle").textContent=obj.userData.title;
+          document.getElementById("modalText").textContent=obj.userData.text;
+          document.getElementById("modal").classList.add("show");
+        }
       }
+    });
 
-      const accounts = await window.ethereum.request({
-        method: "eth_requestAccounts"
+    document.getElementById("closeModal").onclick=()=>document.getElementById("modal").classList.remove("show");
+    document.getElementById("modal").onclick=e=>{
+      if(e.target.id==="modal") e.currentTarget.classList.remove("show");
+    };
+
+    async function connectWallet(){
+      const status=document.getElementById("walletStatus");
+      try{
+        if(!window.ethereum){status.textContent="MetaMask не знайдено";return;}
+        const chainId=await ethereum.request({method:"eth_chainId"});
+        if(chainId!==SEPOLIA_CHAIN_ID){
+          await ethereum.request({method:"wallet_switchEthereumChain",params:[{chainId:SEPOLIA_CHAIN_ID}]});
+        }
+        const accounts=await ethereum.request({method:"eth_requestAccounts"});
+        const provider=new ethers.BrowserProvider(window.ethereum);
+        const contract=new ethers.Contract(CONTRACT_ADDRESS,ABI,provider);
+        const [raw,decimals,symbol]=await Promise.all([
+          contract.balanceOf(accounts[0]),contract.decimals(),contract.symbol()
+        ]);
+        document.getElementById("balance").textContent=
+          Number(ethers.formatUnits(raw,decimals)).toLocaleString("uk-UA")+" "+symbol;
+        status.textContent="Підключено: "+accounts[0].slice(0,6)+"…"+accounts[0].slice(-4);
+      }catch(e){
+        console.error(e);status.textContent="Не вдалося підключити гаманець";
+      }
+    }
+    document.getElementById("walletBtn").onclick=connectWallet;
+
+    const clock=new THREE.Clock();
+    function animate(){
+      requestAnimationFrame(animate);
+      const dt=Math.min(clock.getDelta(),.05);
+      const t=performance.now()*.001;
+
+      particles.forEach((p,i)=>{
+        const phase=(t*p.userData.speed+p.userData.offset)%3.2;
+        const y=1.5+phase*2.1-0.72*phase*phase;
+        const r=p.userData.radius*phase/3.2;
+        p.position.set(Math.cos(p.userData.angle)*r,Math.max(1.35,y),Math.sin(p.userData.angle)*r);
       });
 
-      currentAccount = accounts[0];
-      provider = new ethers.BrowserProvider(window.ethereum);
+      if(controls.isLocked){
+        const speed=8*dt;
+        if(keys["KeyW"]) controls.moveForward(speed);
+        if(keys["KeyS"]) controls.moveForward(-speed);
+        if(keys["KeyA"]) controls.moveRight(-speed);
+        if(keys["KeyD"]) controls.moveRight(speed);
+        camera.position.y=3;
+      }
 
-      document.getElementById("account").textContent = currentAccount;
-      status.textContent = "Підключено до Sepolia";
-      dot.className = "dot ok";
-
-      await refreshBalance();
-    } catch (error) {
-      console.error(error);
-      status.textContent = "Підключення скасовано або сталася помилка";
-      dot.className = "dot bad";
+      fountainGroup.rotation.y+=dt*.08;
+      renderer.render(scene,camera);
     }
-  }
+    animate();
 
-  async function refreshBalance() {
-    if (!currentAccount || !provider) {
-      await connectWallet();
-      return;
-    }
-
-    try {
-      const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, provider);
-
-      const [rawBalance, decimals, symbol] = await Promise.all([
-        contract.balanceOf(currentAccount),
-        contract.decimals(),
-        contract.symbol()
-      ]);
-
-      const formatted = ethers.formatUnits(rawBalance, decimals);
-
-      document.getElementById("balance").textContent =
-        Number(formatted).toLocaleString("uk-UA", {
-          maximumFractionDigits: 4
-        }) + " " + symbol;
-
-    } catch (error) {
-      console.error(error);
-      document.getElementById("balance").textContent =
-        "Не вдалося прочитати баланс";
-    }
-  }
-
-  if (window.ethereum) {
-    window.ethereum.on("accountsChanged", () => location.reload());
-    window.ethereum.on("chainChanged", () => location.reload());
-  }
-</script>
+    addEventListener("resize",()=>{
+      camera.aspect=innerWidth/innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(innerWidth,innerHeight);
+    });
+  </script>
 </body>
 </html>
