@@ -3,236 +3,359 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Fountain World</title>
+  <title>Fountain Pet Shop</title>
   <style>
-    html,body{margin:0;height:100%;overflow:hidden;background:#070b18;font-family:Arial,sans-serif;color:#fff}
-    canvas{display:block}
-    .hud,.panel{position:fixed;z-index:10;background:rgba(8,12,28,.8);backdrop-filter:blur(12px);
-      border:1px solid rgba(255,255,255,.13);border-radius:18px;padding:16px;box-shadow:0 20px 60px rgba(0,0,0,.35)}
-    .hud{left:16px;top:16px;max-width:340px}.panel{right:16px;top:16px;width:250px}
-    h1{margin:0 0 8px;font-size:23px}p{color:#c1cbe0;line-height:1.45}
-    button{border:0;border-radius:12px;padding:11px 15px;margin:4px 6px 4px 0;
-      background:linear-gradient(135deg,#9b5cff,#e1b85b);color:#080b14;font-weight:800;cursor:pointer}
-    button.secondary{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.15)}
-    .stat{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.08)}
-    .tip{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:10;
-      background:rgba(8,12,28,.84);border:1px solid rgba(255,255,255,.13);
-      padding:10px 15px;border-radius:999px;color:#cbd5e8;font-size:13px;text-align:center}
-    .modal{position:fixed;inset:0;z-index:30;display:none;place-items:center;background:rgba(0,0,0,.68)}
-    .modal.show{display:grid}.modal-card{width:min(460px,90%);background:#111a31;border-radius:20px;padding:22px;border:1px solid rgba(255,255,255,.13)}
-    .close{float:right;background:none;color:#fff;font-size:24px;padding:0}
-    #errorBox{color:#ff9aa5;font-size:13px;white-space:pre-wrap}
-    @media(max-width:760px){.panel{display:none}.hud{max-width:calc(100% - 32px)}.tip{width:calc(100% - 36px);border-radius:14px}}
+    :root{
+      --bg:#080b18;--panel:#11182c;--panel2:#171f37;--text:#f7f8fc;--muted:#aeb9cf;
+      --purple:#9d62ff;--gold:#e7bd61;--green:#43d19e;--red:#ff7280;--line:rgba(255,255,255,.1)
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:linear-gradient(180deg,#070b17,#0b1020);color:var(--text);
+      font-family:Inter,system-ui,Arial,sans-serif}
+    button,input,textarea,select{font:inherit}
+    header{position:sticky;top:0;z-index:20;background:rgba(8,11,24,.9);backdrop-filter:blur(14px);
+      border-bottom:1px solid var(--line)}
+    .wrap{width:min(1180px,92%);margin:auto}
+    nav{display:flex;align-items:center;justify-content:space-between;padding:14px 0;gap:14px}
+    .brand{display:flex;gap:12px;align-items:center;font-weight:900}
+    .logo{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;
+      background:linear-gradient(135deg,var(--purple),var(--gold));color:#0b0d18;font-size:24px}
+    .actions{display:flex;gap:8px;flex-wrap:wrap}
+    .btn{border:0;border-radius:12px;padding:11px 15px;font-weight:800;cursor:pointer;
+      background:linear-gradient(135deg,var(--purple),#c197ff);color:white}
+    .btn.secondary{background:transparent;border:1px solid var(--line)}
+    .btn.gold{background:linear-gradient(135deg,var(--gold),#ffe4a0);color:#141017}
+    .btn.red{background:linear-gradient(135deg,var(--red),#ff9c88)}
+    main{padding:32px 0 70px}
+    .hero{display:grid;grid-template-columns:1.2fr .8fr;gap:20px;align-items:stretch}
+    .panel{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);
+      border-radius:22px;padding:22px}
+    h1{font-size:clamp(38px,6vw,70px);line-height:1;margin:8px 0 18px}
+    h2{margin-top:0}
+    p{color:var(--muted);line-height:1.6}
+    .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+    .stat{background:rgba(255,255,255,.04);padding:14px;border-radius:14px}
+    .stat small{color:var(--muted);display:block}.stat b{font-size:21px}
+    .toolbar{display:flex;gap:10px;flex-wrap:wrap;margin:24px 0}
+    input,textarea,select{width:100%;padding:11px 12px;border-radius:11px;border:1px solid var(--line);
+      background:#0b1020;color:white}
+    .search{max-width:420px}
+    .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+    .product{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);
+      border-radius:18px;overflow:hidden;display:flex;flex-direction:column}
+    .product img{width:100%;height:210px;object-fit:cover;background:#151b2d}
+    .product-body{padding:16px;display:flex;flex-direction:column;gap:8px;flex:1}
+    .product h3{margin:0}.price{font-size:22px;font-weight:900;color:var(--gold)}
+    .stock{font-size:13px;color:var(--green)}.stock.out{color:var(--red)}
+    .tag{display:inline-block;padding:4px 8px;border-radius:999px;background:rgba(157,98,255,.17);
+      color:#d7c3ff;font-size:12px}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .admin{display:none;margin-top:28px}.admin.show{display:block}
+    .admin-grid{display:grid;grid-template-columns:.8fr 1.2fr;gap:18px}
+    table{width:100%;border-collapse:collapse;font-size:14px}
+    th,td{text-align:left;padding:10px;border-bottom:1px solid var(--line);vertical-align:top}
+    .modal{position:fixed;inset:0;z-index:50;display:none;place-items:center;background:rgba(0,0,0,.72);padding:18px}
+    .modal.show{display:grid}.modal-card{width:min(560px,96%);max-height:90vh;overflow:auto;background:#11182c;
+      border:1px solid var(--line);border-radius:20px;padding:20px}
+    .close{float:right;background:none;border:0;color:white;font-size:24px;cursor:pointer}
+    .notice{font-size:13px;color:var(--muted)}
+    @media(max-width:900px){.hero,.admin-grid,.grid{grid-template-columns:1fr}.stats{grid-template-columns:1fr 1fr}}
   </style>
 </head>
 <body>
-  <div class="hud">
-    <h1>⛲ Fountain World</h1>
-    <p>Перетягуй мишу для огляду. Колесо — наближення. Натискай на будівлі.</p>
-    <button id="walletBtn">Підключити MetaMask</button>
-    <button id="resetBtn" class="secondary">Початковий вид</button>
-    <p id="walletStatus">Гаманець не підключено</p>
-    <div id="errorBox"></div>
+<header>
+  <div class="wrap">
+    <nav>
+      <div class="brand"><div class="logo">⛲</div><div>Fountain Pet Shop</div></div>
+      <div class="actions">
+        <button class="btn secondary" id="walletBtn">MetaMask</button>
+        <button class="btn gold" id="adminBtn">Керування магазином</button>
+      </div>
+    </nav>
   </div>
+</header>
 
-  <div class="panel">
-    <div class="stat"><span>Мережа</span><b>Sepolia</b></div>
-    <div class="stat"><span>Токен</span><b>FNT</b></div>
-    <div class="stat"><span>Баланс</span><b id="balance">—</b></div>
-    <div class="stat"><span>Локація</span><b>Central Fountain</b></div>
-  </div>
-
-  <div class="tip">Миша: обертання · колесо: масштаб · клік: локація</div>
-
-  <div class="modal" id="modal">
-    <div class="modal-card">
-      <button class="close" id="closeModal">×</button>
-      <h2 id="modalTitle">Локація</h2>
-      <p id="modalText"></p>
+<main class="wrap">
+  <section class="hero">
+    <div class="panel">
+      <span class="tag">Реальні товари + цифрова екосистема</span>
+      <h1>Зоомагазин у світі Fountain</h1>
+      <p>Каталог реальних товарів, облік залишків, замовлення та тестове використання FNT.
+         Адміністратор магазину може змінювати товари прямо на сайті.</p>
+      <div class="toolbar">
+        <input id="search" class="search" placeholder="Пошук товарів">
+        <select id="categoryFilter" style="max-width:240px">
+          <option value="">Усі категорії</option>
+        </select>
+      </div>
     </div>
+    <div class="panel">
+      <h2>Стан магазину</h2>
+      <div class="stats">
+        <div class="stat"><small>Товарів</small><b id="productsStat">0</b></div>
+        <div class="stat"><small>Замовлень</small><b id="ordersStat">0</b></div>
+        <div class="stat"><small>FNT баланс</small><b id="fntBalance">—</b></div>
+      </div>
+      <p class="notice" id="walletStatus">Гаманець не підключено.</p>
+    </div>
+  </section>
+
+  <section style="margin-top:28px">
+    <h2>Каталог</h2>
+    <div id="catalog" class="grid"></div>
+  </section>
+
+  <section id="adminPanel" class="admin">
+    <div class="panel">
+      <h2>Панель керування зоомагазином</h2>
+      <p class="notice">Це локальна демо-панель. Зміни зберігаються лише у браузері цього пристрою.</p>
+      <div class="admin-grid">
+        <div>
+          <h3>Додати або змінити товар</h3>
+          <input id="editId" type="hidden">
+          <label>Назва</label><input id="pName">
+          <label>Категорія</label><input id="pCategory" placeholder="Корм, іграшки, аксесуари">
+          <div class="row">
+            <div><label>Ціна, грн</label><input id="pPrice" type="number" min="0"></div>
+            <div><label>Ціна, FNT</label><input id="pFnt" type="number" min="0"></div>
+          </div>
+          <div class="row">
+            <div><label>Залишок</label><input id="pStock" type="number" min="0"></div>
+            <div><label>Артикул</label><input id="pSku"></div>
+          </div>
+          <label>Посилання на фото</label><input id="pImage" placeholder="https://...">
+          <label>Опис</label><textarea id="pDescription" rows="4"></textarea>
+          <div class="toolbar">
+            <button class="btn" id="saveProduct">Зберегти товар</button>
+            <button class="btn secondary" id="clearForm">Очистити</button>
+          </div>
+        </div>
+        <div>
+          <h3>Замовлення</h3>
+          <div style="overflow:auto"><table>
+            <thead><tr><th>№</th><th>Товар</th><th>Клієнт</th><th>Оплата</th><th>Статус</th></tr></thead>
+            <tbody id="ordersTable"></tbody>
+          </table></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div id="orderModal" class="modal">
+  <div class="modal-card">
+    <button class="close" id="closeOrder">×</button>
+    <h2>Оформлення замовлення</h2>
+    <p id="orderProduct"></p>
+    <input id="orderProductId" type="hidden">
+    <label>Ім’я</label><input id="customerName">
+    <label>Телефон</label><input id="customerPhone">
+    <label>Спосіб отримання</label>
+    <select id="delivery">
+      <option>Самовивіз із зоомагазину</option>
+      <option>Доставка по місту</option>
+      <option>Поштова доставка</option>
+    </select>
+    <label>Оплата</label>
+    <select id="payment">
+      <option value="uah">Оплата в гривнях у магазині</option>
+      <option value="fnt-demo">Демо-оплата FNT</option>
+    </select>
+    <button class="btn" id="submitOrder" style="margin-top:14px">Створити замовлення</button>
+    <p class="notice">Сайт не приймає банківські картки і не списує реальні FNT. Це прототип.</p>
   </div>
+</div>
 
-  <script type="module">
-    import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js";
-    import { BrowserProvider, Contract, formatUnits } from "https://cdn.jsdelivr.net/npm/ethers@6.13.4/+esm";
+<script type="module">
+  import { BrowserProvider, Contract, formatUnits } from "https://cdn.jsdelivr.net/npm/ethers@6.13.4/+esm";
 
-    const errorBox = document.getElementById("errorBox");
+  const CONTRACT_ADDRESS="0x40b9b3e6ab22603ffd90f35d3adbaac416a8953b";
+  const SEPOLIA_CHAIN_ID="0xaa36a7";
+  const ABI=[
+    "function balanceOf(address) view returns (uint256)",
+    "function decimals() view returns (uint8)",
+    "function symbol() view returns (string)"
+  ];
 
-    try {
-      const CONTRACT_ADDRESS="0x40b9b3e6ab22603ffd90f35d3adbaac416a8953b";
-      const SEPOLIA_CHAIN_ID="0xaa36a7";
-      const ABI=[
-        "function balanceOf(address) view returns (uint256)",
-        "function decimals() view returns (uint8)",
-        "function symbol() view returns (string)"
-      ];
+  const defaultProducts=[
+    {id:crypto.randomUUID(),name:"Корм для собак Premium 3 кг",category:"Корм",price:690,fnt:35,stock:8,sku:"DOG-001",
+     image:"https://images.unsplash.com/photo-1589924691995-400dc9ecc119?auto=format&fit=crop&w=900&q=80",
+     description:"Повнораціонний сухий корм для дорослих собак."},
+    {id:crypto.randomUUID(),name:"Фіолетовий нашийник",category:"Аксесуари",price:320,fnt:16,stock:12,sku:"COL-002",
+     image:"https://images.unsplash.com/photo-1601758228041-f3b2795255f1?auto=format&fit=crop&w=900&q=80",
+     description:"Міцний регульований нашийник із жетоном."},
+    {id:crypto.randomUUID(),name:"Іграшка для кота",category:"Іграшки",price:180,fnt:9,stock:15,sku:"CAT-003",
+     image:"https://images.unsplash.com/photo-1545249390-6bdfa286032f?auto=format&fit=crop&w=900&q=80",
+     description:"Безпечна інтерактивна іграшка для котів."}
+  ];
 
-      const scene=new THREE.Scene();
-      scene.background=new THREE.Color(0x080b18);
-      scene.fog=new THREE.Fog(0x080b18,35,120);
+  let products=JSON.parse(localStorage.getItem("fountainProducts")||"null")||defaultProducts;
+  let orders=JSON.parse(localStorage.getItem("fountainOrders")||"[]");
 
-      const camera=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,.1,300);
-      const renderer=new THREE.WebGLRenderer({antialias:true});
-      renderer.setSize(innerWidth,innerHeight);
-      renderer.setPixelRatio(Math.min(devicePixelRatio,2));
-      renderer.shadowMap.enabled=true;
-      document.body.prepend(renderer.domElement);
+  const catalog=document.getElementById("catalog");
+  const categoryFilter=document.getElementById("categoryFilter");
+  const search=document.getElementById("search");
 
-      scene.add(new THREE.HemisphereLight(0x9b82ff,0x10152a,2));
-      const light=new THREE.DirectionalLight(0xffffff,2);
-      light.position.set(20,30,10);light.castShadow=true;scene.add(light);
+  function save(){
+    localStorage.setItem("fountainProducts",JSON.stringify(products));
+    localStorage.setItem("fountainOrders",JSON.stringify(orders));
+  }
 
-      const ground=new THREE.Mesh(
-        new THREE.CircleGeometry(60,96),
-        new THREE.MeshStandardMaterial({color:0x10172c,roughness:.95})
-      );
-      ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;scene.add(ground);
+  function renderCategories(){
+    const current=categoryFilter.value;
+    const cats=[...new Set(products.map(p=>p.category).filter(Boolean))];
+    categoryFilter.innerHTML='<option value="">Усі категорії</option>'+
+      cats.map(c=>`<option>${escapeHtml(c)}</option>`).join("");
+    categoryFilter.value=current;
+  }
 
-      const plaza=new THREE.Mesh(
-        new THREE.CircleGeometry(15,64),
-        new THREE.MeshStandardMaterial({color:0x1a2240,roughness:.8})
-      );
-      plaza.rotation.x=-Math.PI/2;plaza.position.y=.02;scene.add(plaza);
+  function escapeHtml(s=""){
+    return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[m]));
+  }
 
-      const fountain=new THREE.Group();
-      const base=new THREE.Mesh(new THREE.CylinderGeometry(4.3,4.8,1,64),
-        new THREE.MeshStandardMaterial({color:0x3a2a5f,metalness:.4,roughness:.35}));
-      base.position.y=.5;fountain.add(base);
-      const basin=new THREE.Mesh(new THREE.CylinderGeometry(3.5,3.8,.45,64),
-        new THREE.MeshStandardMaterial({color:0x5d36a6,metalness:.35,roughness:.25}));
-      basin.position.y=1.1;fountain.add(basin);
-      const water=new THREE.Mesh(new THREE.CylinderGeometry(3.1,3.1,.12,64),
-        new THREE.MeshStandardMaterial({color:0x7d6cff,emissive:0x24145d,transparent:true,opacity:.86}));
-      water.position.y=1.36;fountain.add(water);
-      const stem=new THREE.Mesh(new THREE.CylinderGeometry(.55,.8,3.2,32),
-        new THREE.MeshStandardMaterial({color:0xe1b85b,metalness:.75,roughness:.22}));
-      stem.position.y=2.7;fountain.add(stem);
-      const orb=new THREE.Mesh(new THREE.SphereGeometry(.85,32,32),
-        new THREE.MeshStandardMaterial({color:0xb87cff,emissive:0x3d176f,emissiveIntensity:1}));
-      orb.position.y=4.5;fountain.add(orb);
-      scene.add(fountain);
-
-      const clickable=[];
-      function addBuilding(x,z,w,h,d,color,title,text){
-        const g=new THREE.Group();
-        const body=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),
-          new THREE.MeshStandardMaterial({color,roughness:.7}));
-        body.position.y=h/2;body.castShadow=true;g.add(body);
-        const roof=new THREE.Mesh(new THREE.ConeGeometry(Math.max(w,d)*.75,1.8,4),
-          new THREE.MeshStandardMaterial({color:0xe1b85b,metalness:.5}));
-        roof.position.y=h+.9;roof.rotation.y=Math.PI/4;g.add(roof);
-        g.position.set(x,0,z);g.userData={title,text};scene.add(g);clickable.push(g);
-      }
-
-      addBuilding(-12,-8,5,7,5,0x233f67,"Gallery of Memory","Галерея цифрового мистецтва, спогадів і сюрреалістичних образів.");
-      addBuilding(12,-7,5,6,5,0x4a2c63,"Fountain Café","Віртуальне кафе для цифрових подій і предметів.");
-      addBuilding(-13,10,6,8,5,0x274d46,"Creators House","Простір художників, дизайнерів та авторів.");
-      addBuilding(13,10,6,9,5,0x493f70,"World Library","Бібліотека історій, персонажів і документації Fountain.");
-
-      for(let i=0;i<24;i++){
-        const a=i/24*Math.PI*2;
-        const lamp=new THREE.PointLight(0x9b5cff,1.5,8);
-        lamp.position.set(Math.cos(a)*10,1.3,Math.sin(a)*10);scene.add(lamp);
-      }
-
-      let yaw=0,pitch=-.18,distance=27;
-      let dragging=false,lastX=0,lastY=0,moved=false;
-
-      function updateCamera(){
-        const cp=Math.cos(pitch),sp=Math.sin(pitch);
-        camera.position.set(Math.sin(yaw)*cp*distance,7+sp*distance,Math.cos(yaw)*cp*distance);
-        camera.lookAt(0,2.5,0);
-      }
-      updateCamera();
-
-      renderer.domElement.addEventListener("pointerdown",e=>{
-        dragging=true;moved=false;lastX=e.clientX;lastY=e.clientY;
-      });
-      addEventListener("pointerup",()=>dragging=false);
-      addEventListener("pointermove",e=>{
-        if(!dragging)return;
-        const dx=e.clientX-lastX,dy=e.clientY-lastY;
-        if(Math.abs(dx)+Math.abs(dy)>3)moved=true;
-        yaw-=dx*.006;pitch-=dy*.004;
-        pitch=Math.max(-.75,Math.min(.45,pitch));
-        lastX=e.clientX;lastY=e.clientY;updateCamera();
-      });
-      renderer.domElement.addEventListener("wheel",e=>{
-        distance=Math.max(12,Math.min(55,distance+e.deltaY*.02));updateCamera();
-      },{passive:true});
-
-      document.getElementById("resetBtn").addEventListener("click",()=>{
-        yaw=0;pitch=-.18;distance=27;updateCamera();
-      });
-
-      const raycaster=new THREE.Raycaster();
-      const mouse=new THREE.Vector2();
-      renderer.domElement.addEventListener("click",e=>{
-        if(moved)return;
-        mouse.x=(e.clientX/innerWidth)*2-1;
-        mouse.y=-(e.clientY/innerHeight)*2+1;
-        raycaster.setFromCamera(mouse,camera);
-        const hits=raycaster.intersectObjects(clickable,true);
-        if(!hits.length)return;
-        let obj=hits[0].object;
-        while(obj.parent&&!obj.userData.title)obj=obj.parent;
-        if(obj.userData.title){
-          document.getElementById("modalTitle").textContent=obj.userData.title;
-          document.getElementById("modalText").textContent=obj.userData.text;
-          document.getElementById("modal").classList.add("show");
-        }
-      });
-
-      document.getElementById("closeModal").addEventListener("click",()=>{
-        document.getElementById("modal").classList.remove("show");
-      });
-      document.getElementById("modal").addEventListener("click",e=>{
-        if(e.target.id==="modal")e.currentTarget.classList.remove("show");
-      });
-
-      async function connectWallet(){
-        const status=document.getElementById("walletStatus");
-        try{
-          if(!window.ethereum){status.textContent="MetaMask не знайдено";return;}
-          const chainId=await window.ethereum.request({method:"eth_chainId"});
-          if(chainId!==SEPOLIA_CHAIN_ID){
-            await window.ethereum.request({
-              method:"wallet_switchEthereumChain",
-              params:[{chainId:SEPOLIA_CHAIN_ID}]
-            });
-          }
-          const accounts=await window.ethereum.request({method:"eth_requestAccounts"});
-          const provider=new BrowserProvider(window.ethereum);
-          const contract=new Contract(CONTRACT_ADDRESS,ABI,provider);
-          const [raw,decimals,symbol]=await Promise.all([
-            contract.balanceOf(accounts[0]),contract.decimals(),contract.symbol()
-          ]);
-          document.getElementById("balance").textContent=
-            Number(formatUnits(raw,decimals)).toLocaleString("uk-UA")+" "+symbol;
-          status.textContent="Підключено: "+accounts[0].slice(0,6)+"…"+accounts[0].slice(-4);
-        }catch(err){
-          console.error(err);status.textContent="Помилка підключення MetaMask";
-        }
-      }
-
-      document.getElementById("walletBtn").addEventListener("click",connectWallet);
-
-      function animate(){
-        requestAnimationFrame(animate);
-        fountain.rotation.y+=.0015;
-        orb.position.y=4.5+Math.sin(performance.now()*.002)*.15;
-        renderer.render(scene,camera);
-      }
-      animate();
-
-      addEventListener("resize",()=>{
-        camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();
-        renderer.setSize(innerWidth,innerHeight);
-      });
-    } catch(err) {
-      errorBox.textContent="Помилка запуску: "+err.message;
-      console.error(err);
+  function renderCatalog(){
+    const q=search.value.toLowerCase();
+    const cat=categoryFilter.value;
+    const filtered=products.filter(p=>
+      (!cat||p.category===cat) &&
+      (p.name.toLowerCase().includes(q)||p.description.toLowerCase().includes(q)||p.sku.toLowerCase().includes(q))
+    );
+    catalog.innerHTML=filtered.map(p=>`
+      <article class="product">
+        <img src="${escapeHtml(p.image)}" alt="${escapeHtml(p.name)}" onerror="this.src='https://placehold.co/800x500/171f37/ffffff?text=Fountain+Pet+Shop'">
+        <div class="product-body">
+          <span class="tag">${escapeHtml(p.category)}</span>
+          <h3>${escapeHtml(p.name)}</h3>
+          <p>${escapeHtml(p.description)}</p>
+          <div class="price">${Number(p.price).toLocaleString("uk-UA")} грн · ${p.fnt} FNT</div>
+          <div class="stock ${p.stock<=0?'out':''}">${p.stock>0?'В наявності: '+p.stock:'Немає в наявності'}</div>
+          <button class="btn" ${p.stock<=0?'disabled':''} onclick="window.openOrder('${p.id}')">Замовити</button>
+          <button class="btn secondary adminEdit" style="display:none" onclick="window.editProduct('${p.id}')">Редагувати</button>
+        </div>
+      </article>`).join("");
+    document.getElementById("productsStat").textContent=products.length;
+    document.getElementById("ordersStat").textContent=orders.length;
+    if(document.getElementById("adminPanel").classList.contains("show")){
+      document.querySelectorAll(".adminEdit").forEach(x=>x.style.display="block");
     }
-  </script>
+  }
+
+  function renderOrders(){
+    document.getElementById("ordersTable").innerHTML=orders.map((o,i)=>`
+      <tr>
+        <td>${i+1}</td>
+        <td>${escapeHtml(o.productName)}</td>
+        <td>${escapeHtml(o.customer)}<br><small>${escapeHtml(o.phone)}</small></td>
+        <td>${escapeHtml(o.payment)}</td>
+        <td>
+          <select onchange="window.updateOrderStatus('${o.id}',this.value)">
+            ${["Нове","Підтверджено","Готове до видачі","Виконано","Скасовано"].map(s=>
+              `<option ${s===o.status?'selected':''}>${s}</option>`).join("")}
+          </select>
+        </td>
+      </tr>`).join("");
+  }
+
+  window.updateOrderStatus=(id,status)=>{
+    const order=orders.find(o=>o.id===id);if(order)order.status=status;save();renderOrders();
+  };
+
+  window.openOrder=id=>{
+    const p=products.find(x=>x.id===id);if(!p)return;
+    document.getElementById("orderProductId").value=id;
+    document.getElementById("orderProduct").textContent=`${p.name} — ${p.price} грн / ${p.fnt} FNT`;
+    document.getElementById("orderModal").classList.add("show");
+  };
+
+  document.getElementById("closeOrder").onclick=()=>document.getElementById("orderModal").classList.remove("show");
+
+  document.getElementById("submitOrder").onclick=()=>{
+    const p=products.find(x=>x.id===document.getElementById("orderProductId").value);
+    const customer=document.getElementById("customerName").value.trim();
+    const phone=document.getElementById("customerPhone").value.trim();
+    if(!p||!customer||!phone){alert("Заповни ім’я і телефон.");return}
+    if(p.stock<=0){alert("Товар закінчився.");return}
+    orders.unshift({
+      id:crypto.randomUUID(),productId:p.id,productName:p.name,customer,phone,
+      delivery:document.getElementById("delivery").value,
+      payment:document.getElementById("payment").value==="uah"?"Гривні":"Демо-FNT",
+      status:"Нове",createdAt:new Date().toISOString()
+    });
+    p.stock-=1;save();renderCatalog();renderOrders();
+    document.getElementById("orderModal").classList.remove("show");
+    alert("Замовлення створено. Магазин побачить його в панелі керування цього браузера.");
+  };
+
+  function clearForm(){
+    ["editId","pName","pCategory","pPrice","pFnt","pStock","pSku","pImage","pDescription"]
+      .forEach(id=>document.getElementById(id).value="");
+  }
+  document.getElementById("clearForm").onclick=clearForm;
+
+  document.getElementById("saveProduct").onclick=()=>{
+    const id=document.getElementById("editId").value;
+    const data={
+      id:id||crypto.randomUUID(),
+      name:document.getElementById("pName").value.trim(),
+      category:document.getElementById("pCategory").value.trim(),
+      price:Number(document.getElementById("pPrice").value||0),
+      fnt:Number(document.getElementById("pFnt").value||0),
+      stock:Number(document.getElementById("pStock").value||0),
+      sku:document.getElementById("pSku").value.trim(),
+      image:document.getElementById("pImage").value.trim(),
+      description:document.getElementById("pDescription").value.trim()
+    };
+    if(!data.name){alert("Введи назву товару.");return}
+    const idx=products.findIndex(p=>p.id===id);
+    if(idx>=0)products[idx]=data;else products.unshift(data);
+    save();clearForm();renderCategories();renderCatalog();alert("Товар збережено.");
+  };
+
+  window.editProduct=id=>{
+    const p=products.find(x=>x.id===id);if(!p)return;
+    document.getElementById("editId").value=p.id;
+    document.getElementById("pName").value=p.name;
+    document.getElementById("pCategory").value=p.category;
+    document.getElementById("pPrice").value=p.price;
+    document.getElementById("pFnt").value=p.fnt;
+    document.getElementById("pStock").value=p.stock;
+    document.getElementById("pSku").value=p.sku;
+    document.getElementById("pImage").value=p.image;
+    document.getElementById("pDescription").value=p.description;
+    document.getElementById("adminPanel").scrollIntoView({behavior:"smooth"});
+  };
+
+  document.getElementById("adminBtn").onclick=()=>{
+    const pin=prompt("Введи локальний PIN адміністратора:");
+    if(pin!=="2468"){alert("Невірний PIN.");return}
+    document.getElementById("adminPanel").classList.toggle("show");
+    renderCatalog();renderOrders();
+  };
+
+  search.oninput=renderCatalog;
+  categoryFilter.onchange=renderCatalog;
+
+  document.getElementById("walletBtn").onclick=async()=>{
+    const status=document.getElementById("walletStatus");
+    try{
+      if(!window.ethereum){status.textContent="MetaMask не знайдено.";return}
+      const chainId=await ethereum.request({method:"eth_chainId"});
+      if(chainId!==SEPOLIA_CHAIN_ID){
+        await ethereum.request({method:"wallet_switchEthereumChain",params:[{chainId:SEPOLIA_CHAIN_ID}]});
+      }
+      const accounts=await ethereum.request({method:"eth_requestAccounts"});
+      const provider=new BrowserProvider(window.ethereum);
+      const contract=new Contract(CONTRACT_ADDRESS,ABI,provider);
+      const [raw,decimals,symbol]=await Promise.all([
+        contract.balanceOf(accounts[0]),contract.decimals(),contract.symbol()
+      ]);
+      document.getElementById("fntBalance").textContent=
+        Number(formatUnits(raw,decimals)).toLocaleString("uk-UA")+" "+symbol;
+      status.textContent="Підключено: "+accounts[0].slice(0,6)+"…"+accounts[0].slice(-4);
+    }catch(e){console.error(e);status.textContent="Помилка підключення MetaMask."}
+  };
+
+  renderCategories();renderCatalog();renderOrders();
+</script>
 </body>
 </html>
