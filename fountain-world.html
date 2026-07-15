@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fountain World</title>
+  <meta name="description" content="Interactive 3D prototype of Fountain World." />
+  <style>
+    html,body{margin:0;height:100%;overflow:hidden;background:#070b18;font-family:Inter,Arial,sans-serif;color:#fff}
+    #app{position:fixed;inset:0}
+    canvas{display:block}
+    .hud{
+      position:fixed;left:18px;top:18px;z-index:10;
+      background:rgba(8,12,28,.72);backdrop-filter:blur(14px);
+      border:1px solid rgba(255,255,255,.12);border-radius:18px;
+      padding:16px 18px;max-width:340px;box-shadow:0 20px 60px rgba(0,0,0,.35)
+    }
+    .hud h1{margin:0 0 6px;font-size:22px}
+    .hud p{margin:6px 0;color:#bdc7db;line-height:1.45;font-size:14px}
+    .btn{
+      border:0;border-radius:12px;padding:11px 15px;margin-top:10px;
+      background:linear-gradient(135deg,#9b5cff,#e1b85b);color:#090b14;
+      font-weight:800;cursor:pointer
+    }
+    .btn.secondary{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.14);margin-left:6px}
+    .panel{
+      position:fixed;right:18px;top:18px;z-index:10;width:260px;
+      background:rgba(8,12,28,.72);backdrop-filter:blur(14px);
+      border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:16px
+    }
+    .stat{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.08);font-size:14px}
+    .stat:last-child{border-bottom:0}
+    .tip{
+      position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:10;
+      background:rgba(8,12,28,.72);border:1px solid rgba(255,255,255,.12);
+      border-radius:999px;padding:10px 16px;color:#cbd5e8;font-size:13px;text-align:center
+    }
+    .modal{
+      position:fixed;inset:0;z-index:20;display:none;place-items:center;
+      background:rgba(2,4,10,.68);backdrop-filter:blur(8px)
+    }
+    .modal.show{display:grid}
+    .modal-card{
+      width:min(480px,90%);background:#10182e;border:1px solid rgba(255,255,255,.12);
+      border-radius:22px;padding:24px;box-shadow:0 30px 90px rgba(0,0,0,.5)
+    }
+    .modal-card h2{margin-top:0}
+    .modal-card p{color:#bdc7db;line-height:1.55}
+    .close{float:right;background:none;border:0;color:#fff;font-size:24px;cursor:pointer}
+    @media(max-width:760px){
+      .panel{display:none}
+      .hud{max-width:calc(100% - 36px)}
+      .tip{width:calc(100% - 40px);border-radius:16px}
+    }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+
+  <div class="hud">
+    <h1>⛲ Fountain World</h1>
+    <p>Перший інтерактивний прототип творчого цифрового міста.</p>
+    <button class="btn" id="enterBtn">Увійти у світ</button>
+    <button class="btn secondary" id="walletBtn">MetaMask</button>
+    <p id="walletStatus">Гаманець не підключено</p>
+  </div>
+
+  <div class="panel">
+    <div class="stat"><span>Мережа</span><b>Sepolia</b></div>
+    <div class="stat"><span>Токен</span><b>FNT</b></div>
+    <div class="stat"><span>Баланс</span><b id="balance">—</b></div>
+    <div class="stat"><span>Локація</span><b>Central Fountain</b></div>
+  </div>
+
+  <div class="tip">Миша: огляд · WASD: рух · клік по будівлі: інформація</div>
+
+  <div class="modal" id="modal">
+    <div class="modal-card">
+      <button class="close" id="closeModal">×</button>
+      <h2 id="modalTitle">Локація</h2>
+      <p id="modalText"></p>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.164.1/examples/js/controls/PointerLockControls.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.min.js"></script>
+
+  <script>
+    const CONTRACT_ADDRESS = "0x40b9b3e6ab22603ffd90f35d3adbaac416a8953b";
+    const SEPOLIA_CHAIN_ID = "0xaa36a7";
+    const ABI = [
+      "function balanceOf(address) view returns (uint256)",
+      "function decimals() view returns (uint8)",
+      "function symbol() view returns (string)"
+    ];
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x080b18);
+    scene.fog = new THREE.Fog(0x080b18, 35, 110);
+
+    const camera = new THREE.PerspectiveCamera(70, innerWidth/innerHeight, 0.1, 300);
+    camera.position.set(0, 3, 14);
+
+    const renderer = new THREE.WebGLRenderer({antialias:true});
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    document.getElementById("app").appendChild(renderer.domElement);
+
+    const controls = new THREE.PointerLockControls(camera, document.body);
+    document.getElementById("enterBtn").onclick = () => controls.lock();
+
+    const ambient = new THREE.HemisphereLight(0x8b72ff, 0x10152a, 1.7);
+    scene.add(ambient);
+
+    const moon = new THREE.DirectionalLight(0xffffff, 1.8);
+    moon.position.set(20, 30, 10);
+    moon.castShadow = true;
+    scene.add(moon);
+
+    const ground = new THREE.Mesh(
+      new THREE.CircleGeometry(60, 96),
+      new THREE.MeshStandardMaterial({color:0x10172c, roughness:.95, metalness:.05})
+    );
+    ground.rotation.x = -Math.PI/2;
+    ground.receiveShadow = true;
+    scene.add(ground);
+
+    const plaza = new THREE.Mesh(
+      new THREE.CircleGeometry(15, 64),
+      new THREE.MeshStandardMaterial({color:0x1a2240, roughness:.8})
+    );
+    plaza.rotation.x = -Math.PI/2;
+    plaza.position.y = .02;
+    scene.add(plaza);
+
+    // Fountain
+    const fountainGroup = new THREE.Group();
+    const base = new THREE.Mesh(
+      new THREE.CylinderGeometry(4.2,4.6,1,64),
+      new THREE.MeshStandardMaterial({color:0x3a2a5f,metalness:.45,roughness:.35})
+    );
+    base.position.y=.5;base.castShadow=true;fountainGroup.add(base);
+
+    const basin = new THREE.Mesh(
+      new THREE.CylinderGeometry(3.5,3.8,.45,64),
+      new THREE.MeshStandardMaterial({color:0x5d36a6,metalness:.35,roughness:.25})
+    );
+    basin.position.y=1.1;fountainGroup.add(basin);
+
+    const water = new THREE.Mesh(
+      new THREE.CylinderGeometry(3.1,3.1,.12,64),
+      new THREE.MeshStandardMaterial({color:0x7d6cff,emissive:0x24145d,transparent:true,opacity:.86})
+    );
+    water.position.y=1.36;fountainGroup.add(water);
+
+    const stem = new THREE.Mesh(
+      new THREE.CylinderGeometry(.55,.8,3.2,32),
+      new THREE.MeshStandardMaterial({color:0xe1b85b,metalness:.75,roughness:.22})
+    );
+    stem.position.y=2.7;fountainGroup.add(stem);
+
+    const top = new THREE.Mesh(
+      new THREE.SphereGeometry(.85,32,32),
+      new THREE.MeshStandardMaterial({color:0xb87cff,emissive:0x3d176f,emissiveIntensity:.8})
+    );
+    top.position.y=4.5;fountainGroup.add(top);
+
+    scene.add(fountainGroup);
+
+    // Water particles
+    const particles=[];
+    for(let i=0;i<150;i++){
+      const p=new THREE.Mesh(
+        new THREE.SphereGeometry(.04,8,8),
+        new THREE.MeshBasicMaterial({color:0x9fe7ff})
+      );
+      p.userData.angle=Math.random()*Math.PI*2;
+      p.userData.speed=.5+Math.random()*.7;
+      p.userData.radius=.4+Math.random()*2.5;
+      p.userData.offset=Math.random()*6;
+      scene.add(p);particles.push(p);
+    }
+
+    const clickable=[];
+    function building(x,z,w,h,d,color,title,text){
+      const group=new THREE.Group();
+      const body=new THREE.Mesh(
+        new THREE.BoxGeometry(w,h,d),
+        new THREE.MeshStandardMaterial({color,metalness:.18,roughness:.72})
+      );
+      body.position.y=h/2; body.castShadow=true; group.add(body);
+
+      const roof=new THREE.Mesh(
+        new THREE.ConeGeometry(Math.max(w,d)*.75,1.8,4),
+        new THREE.MeshStandardMaterial({color:0xe1b85b,metalness:.55,roughness:.28})
+      );
+      roof.position.y=h+0.9;roof.rotation.y=Math.PI/4;group.add(roof);
+
+      for(let iy=1;iy<h-1;iy+=1.6){
+        for(let ix=-w/2+.7;ix<w/2;ix+=1.4){
+          const win=new THREE.Mesh(
+            new THREE.PlaneGeometry(.5,.7),
+            new THREE.MeshBasicMaterial({color:0xc68aff})
+          );
+          win.position.set(ix,iy,d/2+.01);group.add(win);
+        }
+      }
+
+      group.position.set(x,0,z);
+      group.userData={title,text};
+      scene.add(group); clickable.push(group);
+    }
+
+    building(-12,-8,5,7,5,0x233f67,"Gallery of Memory",
+      "Цифрова галерея для мистецтва, спогадів і сюрреалістичних образів.");
+    building(12,-7,5,6,5,0x4a2c63,"Fountain Café",
+      "Віртуальне кафе, де FNT може використовуватися для цифрових предметів і подій.");
+    building(-13,10,6,8,5,0x274d46,"Creators House",
+      "Простір для художників, дизайнерів та авторів цифрових світів.");
+    building(13,10,6,9,5,0x493f70,"World Library",
+      "Бібліотека історій, персонажів і документів про екосистему Fountain.");
+
+    // Path lights
+    for(let i=0;i<24;i++){
+      const a=i/24*Math.PI*2;
+      const lamp=new THREE.PointLight(0x9b5cff,1.4,7);
+      lamp.position.set(Math.cos(a)*10,1.2,Math.sin(a)*10);
+      scene.add(lamp);
+      const bulb=new THREE.Mesh(
+        new THREE.SphereGeometry(.12,10,10),
+        new THREE.MeshBasicMaterial({color:0xe7c7ff})
+      );
+      bulb.position.copy(lamp.position);scene.add(bulb);
+    }
+
+    // Stars
+    const starGeo=new THREE.BufferGeometry();
+    const starCount=1200;
+    const starPos=new Float32Array(starCount*3);
+    for(let i=0;i<starCount;i++){
+      const r=70+Math.random()*100;
+      const theta=Math.random()*Math.PI*2;
+      const phi=Math.random()*Math.PI/2;
+      starPos[i*3]=Math.cos(theta)*Math.sin(phi)*r;
+      starPos[i*3+1]=20+Math.cos(phi)*r;
+      starPos[i*3+2]=Math.sin(theta)*Math.sin(phi)*r;
+    }
+    starGeo.setAttribute("position",new THREE.BufferAttribute(starPos,3));
+    scene.add(new THREE.Points(starGeo,new THREE.PointsMaterial({color:0xffffff,size:.22})));
+
+    const keys={};
+    addEventListener("keydown",e=>keys[e.code]=true);
+    addEventListener("keyup",e=>keys[e.code]=false);
+
+    const raycaster=new THREE.Raycaster();
+    renderer.domElement.addEventListener("click",()=>{
+      if(controls.isLocked) return;
+      raycaster.setFromCamera(new THREE.Vector2(0,0),camera);
+      const hits=raycaster.intersectObjects(clickable,true);
+      if(hits.length){
+        let obj=hits[0].object;
+        while(obj.parent && !obj.userData.title) obj=obj.parent;
+        if(obj.userData.title){
+          document.getElementById("modalTitle").textContent=obj.userData.title;
+          document.getElementById("modalText").textContent=obj.userData.text;
+          document.getElementById("modal").classList.add("show");
+        }
+      }
+    });
+
+    document.getElementById("closeModal").onclick=()=>document.getElementById("modal").classList.remove("show");
+    document.getElementById("modal").onclick=e=>{
+      if(e.target.id==="modal") e.currentTarget.classList.remove("show");
+    };
+
+    async function connectWallet(){
+      const status=document.getElementById("walletStatus");
+      try{
+        if(!window.ethereum){status.textContent="MetaMask не знайдено";return;}
+        const chainId=await ethereum.request({method:"eth_chainId"});
+        if(chainId!==SEPOLIA_CHAIN_ID){
+          await ethereum.request({method:"wallet_switchEthereumChain",params:[{chainId:SEPOLIA_CHAIN_ID}]});
+        }
+        const accounts=await ethereum.request({method:"eth_requestAccounts"});
+        const provider=new ethers.BrowserProvider(window.ethereum);
+        const contract=new ethers.Contract(CONTRACT_ADDRESS,ABI,provider);
+        const [raw,decimals,symbol]=await Promise.all([
+          contract.balanceOf(accounts[0]),contract.decimals(),contract.symbol()
+        ]);
+        document.getElementById("balance").textContent=
+          Number(ethers.formatUnits(raw,decimals)).toLocaleString("uk-UA")+" "+symbol;
+        status.textContent="Підключено: "+accounts[0].slice(0,6)+"…"+accounts[0].slice(-4);
+      }catch(e){
+        console.error(e);status.textContent="Не вдалося підключити гаманець";
+      }
+    }
+    document.getElementById("walletBtn").onclick=connectWallet;
+
+    const clock=new THREE.Clock();
+    function animate(){
+      requestAnimationFrame(animate);
+      const dt=Math.min(clock.getDelta(),.05);
+      const t=performance.now()*.001;
+
+      particles.forEach((p,i)=>{
+        const phase=(t*p.userData.speed+p.userData.offset)%3.2;
+        const y=1.5+phase*2.1-0.72*phase*phase;
+        const r=p.userData.radius*phase/3.2;
+        p.position.set(Math.cos(p.userData.angle)*r,Math.max(1.35,y),Math.sin(p.userData.angle)*r);
+      });
+
+      if(controls.isLocked){
+        const speed=8*dt;
+        if(keys["KeyW"]) controls.moveForward(speed);
+        if(keys["KeyS"]) controls.moveForward(-speed);
+        if(keys["KeyA"]) controls.moveRight(-speed);
+        if(keys["KeyD"]) controls.moveRight(speed);
+        camera.position.y=3;
+      }
+
+      fountainGroup.rotation.y+=dt*.08;
+      renderer.render(scene,camera);
+    }
+    animate();
+
+    addEventListener("resize",()=>{
+      camera.aspect=innerWidth/innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(innerWidth,innerHeight);
+    });
+  </script>
+</body>
+</html>
